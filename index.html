@@ -15,11 +15,16 @@ h1{font-size:28px;color:#ffd84a;text-shadow:3px 3px #a02}
 <canvas id="c"></canvas>
 <button id="pause">⏸</button>
 <div class="ov on" id="title"><h1>ダンジョンサバイバー</h1><p>迫りくる魔物をなぎ倒し、<br>ダンジョンの奥深くへ！</p>
-<button id="bNew">はじめから</button><button id="bCont">つづきから</button>
+<button id="bNew">はじめから</button><button id="bCont">つづきから</button><button class="bSnd">🔊 サウンド: ON</button><button id="bCred">クレジット</button>
 <p style="font-size:13px;opacity:.8">スマホ：画面をドラッグで移動<br>PC：WASD / 矢印キー　攻撃は自動</p></div>
 <div class="ov" id="lvl"><h2>レベルアップ！</h2><div id="choices"></div></div>
 <div class="ov" id="tre"><div style="font-size:40px">🎁</div><h2 style="color:#ffd84a">宝箱を開けた！</h2><div id="treName" style="font-size:22px;font-weight:bold;color:#7ff"></div><p id="treDesc"></p><button id="bTre">OK</button></div>
-<div class="ov" id="pz"><h2>ポーズ</h2><button id="bRes">つづける</button><button id="bTitle">タイトルへ</button></div>
+<div class="ov" id="cred" style="overflow:auto;justify-content:flex-start"><h2>クレジット</h2><div style="text-align:left;font-size:13px;max-width:360px;line-height:1.5;word-break:break-all">
+<p><b>グラフィック</b><br>「16x16 DungeonTileset II」 by 0x72 (Robert Norenberg)<br>ライセンス: CC0 1.0<br>https://0x72.itch.io/dungeontileset-ii</p>
+<p><b>BGM</b><br>「5 Chiptunes (Action)」 by Juhani Junkala<br>ライセンス: CC0 1.0<br>https://opengameart.org/content/5-chiptunes-action</p>
+<p><b>効果音</b><br>「Impact Sounds」「RPG Audio」「Digital Audio」 by Kenney (www.kenney.nl)<br>ライセンス: CC0 1.0<br>https://kenney.nl/assets/impact-sounds<br>https://kenney.nl/assets/rpg-audio<br>https://kenney.nl/assets/digital-audio</p>
+<p>素晴らしい素材をありがとうございます！</p></div><button id="bCredX">もどる</button></div>
+<div class="ov" id="pz"><h2>ポーズ</h2><button id="bRes">つづける</button><button class="bSnd">🔊 サウンド: ON</button><button id="bTitle">タイトルへ</button></div>
 <div class="ov" id="dead"><h2 style="color:#f55">やられた…</h2><p>何も失わずにこの階の入口から再挑戦！</p><button id="bRetry">再挑戦</button></div>
 <script>
 "use strict";
@@ -27,6 +32,14 @@ const cv=document.getElementById('c'),cx=cv.getContext('2d');
 let VW=180,VH=320,SC=1;
 function resize(){const w=innerWidth,h=innerHeight;SC=Math.max(2,Math.floor(Math.min(w,h)/180));VW=Math.ceil(w/SC);VH=Math.ceil(h/SC);cv.width=VW;cv.height=VH;cx.imageSmoothingEnabled=false}
 addEventListener('resize',resize);resize();
+const F={"floor_1":[16,64,16,16],"floor_2":[32,64,16,16],"floor_3":[48,64,16,16],"floor_4":[16,80,16,16],"floor_5":[32,80,16,16],"floor_6":[48,80,16,16],"floor_7":[16,96,16,16],"floor_8":[32,96,16,16],"wall_mid":[32,16,16,16],"wall_top_mid":[32,0,16,16],"floor_ladder":[48,96,16,16],"flask_big_red":[288,336,16,16],"weapon_axe":[341,74,9,21],"chest_full_open_anim_f0":[304,416,16,16],"chest_full_open_anim_f1":[320,416,16,16],"chest_full_open_anim_f2":[336,416,16,16],"knight_m_idle_anim_f0":[128,100,16,28],"knight_m_idle_anim_f1":[144,100,16,28],"knight_m_idle_anim_f2":[160,100,16,28],"knight_m_idle_anim_f3":[176,100,16,28],"knight_m_run_anim_f0":[192,100,16,28],"knight_m_run_anim_f1":[208,100,16,28],"knight_m_run_anim_f2":[224,100,16,28],"knight_m_run_anim_f3":[240,100,16,28],"swampy_anim_f0":[432,112,16,16],"swampy_anim_f1":[448,112,16,16],"swampy_anim_f2":[464,112,16,16],"swampy_anim_f3":[480,112,16,16],"imp_run_anim_f0":[432,64,16,16],"imp_run_anim_f1":[448,64,16,16],"imp_run_anim_f2":[464,64,16,16],"imp_run_anim_f3":[480,64,16,16],"skelet_run_anim_f0":[432,88,16,16],"skelet_run_anim_f1":[448,88,16,16],"skelet_run_anim_f2":[464,88,16,16],"skelet_run_anim_f3":[480,88,16,16],"chort_run_anim_f0":[432,273,16,23],"chort_run_anim_f1":[448,273,16,23],"chort_run_anim_f2":[464,273,16,23],"chort_run_anim_f3":[480,273,16,23],"masked_orc_run_anim_f0":[432,153,16,23],"masked_orc_run_anim_f1":[448,153,16,23],"masked_orc_run_anim_f2":[464,153,16,23],"masked_orc_run_anim_f3":[480,153,16,23],"orc_warrior_run_anim_f0":[432,177,16,23],"orc_warrior_run_anim_f1":[448,177,16,23],"orc_warrior_run_anim_f2":[464,177,16,23],"orc_warrior_run_anim_f3":[480,177,16,23],"big_zombie_run_anim_f0":[144,332,32,36],"big_zombie_run_anim_f1":[176,332,32,36],"big_zombie_run_anim_f2":[208,332,32,36],"big_zombie_run_anim_f3":[240,332,32,36],"ogre_run_anim_f0":[144,380,32,36],"ogre_run_anim_f1":[176,380,32,36],"ogre_run_anim_f2":[208,380,32,36],"ogre_run_anim_f3":[240,380,32,36],"necromancer_anim_f0":[368,225,16,23],"necromancer_anim_f1":[384,225,16,23],"necromancer_anim_f2":[400,225,16,23],"necromancer_anim_f3":[416,225,16,23],"big_demon_run_anim_f0":[144,428,32,36],"big_demon_run_anim_f1":[176,428,32,36],"big_demon_run_anim_f2":[208,428,32,36],"big_demon_run_anim_f3":[240,428,32,36],"angel_idle_anim_f0":[368,304,16,16],"angel_idle_anim_f1":[384,304,16,16],"angel_idle_anim_f2":[400,304,16,16],"angel_idle_anim_f3":[416,304,16,16]};
+const SHEET=new Image();let ASSET=false,WSHEET=null;
+SHEET.onload=()=>{try{WSHEET=document.createElement('canvas');WSHEET.width=SHEET.width;WSHEET.height=SHEET.height;const g=WSHEET.getContext('2d');g.drawImage(SHEET,0,0);g.globalCompositeOperation='source-atop';g.fillStyle='#fff';g.fillRect(0,0,WSHEET.width,WSHEET.height)}catch(e){WSHEET=null}ASSET=true};
+SHEET.onerror=()=>{ASSET=false};SHEET.src='assets/img/dungeon.png';
+const an=b=>[0,1,2,3].map(i=>b+'_anim_f'+i);
+const A={knight_idle:an('knight_m_idle'),knight_run:an('knight_m_run'),angel:an('angel_idle')};
+function dspr(n,x,y,flip,sc,white){const f=F[n];if(!f)return;sc=sc||1;const w=f[2]*sc,h=f[3]*sc,src=white&&WSHEET?WSHEET:SHEET;x=Math.round(x-w/2);y=Math.round(y-h);
+ if(flip){cx.save();cx.translate(x+w,y);cx.scale(-1,1);cx.drawImage(src,f[0],f[1],f[2],f[3],0,0,w,h);cx.restore()}else cx.drawImage(src,f[0],f[1],f[2],f[3],x,y,w,h)}
 const T=16,$=id=>document.getElementById(id);
 // ---------- sprites ----------
 function spr(rows,pal){const h=rows.length,w=rows[0].length,c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
@@ -41,11 +54,11 @@ S.demon=spr(["r......r","rr.rr.rr",".rrrrrr.",".ryrryr.",".rrrrrr.","..rkkr..","
 S.gem=spr([".c.","ccc",".c."],{c:'#40e0ff'});S.gem2=spr([".c.","ccc",".c."],{c:'#50ff60'});S.gem3=spr([".c.","ccc",".c."],{c:'#ff50c0'});
 S.heart=spr(["r.r","rrr",".r."],{r:'#ff3050'});
 const BOSSES=[
- {n:'キングスライム',s:spr(["....gggggg....","..gggggggggg..",".gggyyggyygg..","ggggkyggkyggg.","gggggggggggggg","ggggrrrrrrgggg","gggggggggggggg",".gggggggggggg."],{g:'#30b040',y:'#ff0',k:'#000',r:'#900'}),sz:3},
- {n:'スケルトンロード',s:spr(["..y.y.y..",".yyyyyyy.","..wwwww..",".wkwwwkw.",".wwwwwww.","..w.w.w..","wwwwwwwww","w.wwwww.w","..w...w..",".ww...ww."],{w:'#ddd',k:'#f00',y:'#fc0'}),sz:3},
- {n:'ドラゴン',s:spr(["g..........g","gg..gggg..gg","ggggggggggg.",".ggyggggyg..",".gggggggggg.","..grrrrrrg..","..gggggggg..",".gg.gggg.gg.","gg........gg"],{g:'#a03030',y:'#ff0',r:'#ff8000'}),sz:3},
- {n:'魔王',s:spr(["p...pppp...p","pp.pppppp.pp",".pppppppppp.",".ppyppppypp.",".pppppppppp.","..pprrrrpp..","pppppppppppp","p.pppppppp.p","..pp....pp.."],{p:'#402060',y:'#f0f',r:'#f00'}),sz:3}];
-const ETYPES=[{s:'slime',hp:6,sp:22,dmg:5,xp:1,r:5},{s:'bat',hp:4,sp:40,dmg:4,xp:1,r:5},{s:'skel',hp:12,sp:26,dmg:8,xp:2,r:5},{s:'ghost',hp:10,sp:34,dmg:7,xp:2,r:5},{s:'demon',hp:22,sp:30,dmg:12,xp:3,r:6}];
+ {n:'腐肉の巨人',a:an('big_zombie_run'),sc:2,s:spr(["....gggggg....","..gggggggggg..",".gggyyggyygg..","ggggkyggkyggg.","gggggggggggggg","ggggrrrrrrgggg","gggggggggggggg",".gggggggggggg."],{g:'#30b040',y:'#ff0',k:'#000',r:'#900'}),sz:3},
+ {n:'オーガキング',a:an('ogre_run'),sc:2,s:spr(["..y.y.y..",".yyyyyyy.","..wwwww..",".wkwwwkw.",".wwwwwww.","..w.w.w..","wwwwwwwww","w.wwwww.w","..w...w..",".ww...ww."],{w:'#ddd',k:'#f00',y:'#fc0'}),sz:3},
+ {n:'ネクロマンサー',a:an('necromancer'),sc:3,s:spr(["g..........g","gg..gggg..gg","ggggggggggg.",".ggyggggyg..",".gggggggggg.","..grrrrrrg..","..gggggggg..",".gg.gggg.gg.","gg........gg"],{g:'#a03030',y:'#ff0',r:'#ff8000'}),sz:3},
+ {n:'大魔王',a:an('big_demon_run'),sc:3,s:spr(["p...pppp...p","pp.pppppp.pp",".pppppppppp.",".ppyppppypp.",".pppppppppp.","..pprrrrpp..","pppppppppppp","p.pppppppp.p","..pp....pp.."],{p:'#402060',y:'#f0f',r:'#f00'}),sz:3}];
+const ETYPES=[{s:'slime',a:an('swampy'),hp:6,sp:22,dmg:5,xp:1,r:5},{s:'bat',a:an('imp_run'),hp:4,sp:40,dmg:4,xp:1,r:5},{s:'skel',a:an('skelet_run'),hp:12,sp:26,dmg:8,xp:2,r:5},{s:'ghost',a:an('chort_run'),hp:10,sp:34,dmg:7,xp:2,r:5},{s:'demon',a:an('masked_orc_run'),hp:22,sp:30,dmg:12,xp:3,r:6},{s:'demon',a:an('orc_warrior_run'),hp:34,sp:28,dmg:15,xp:4,r:6}];
 // tiles
 function tile(base,dark,seed){const c=document.createElement('canvas');c.width=c.height=T;const g=c.getContext('2d');g.fillStyle=base;g.fillRect(0,0,T,T);let r=seed;for(let i=0;i<14;i++){r=(r*9301+49297)%233280;g.fillStyle=dark;g.fillRect(r%T,(r>>4)%T,1+(i%2),1)}return c}
 const THEMES=[['#4a4058','#3a3046','#6a5a3a','#2a2030'],['#3c4a3c','#2c382c','#5a6a4a','#1a241a'],['#584040','#463030','#7a4a3a','#301818'],['#38384a','#28283a','#505080','#18182a']];
@@ -91,12 +104,12 @@ function genFloor(){
   const a=rooms[0];let far=rooms[1],fd=0;for(const r of rooms){const d=Math.hypot(r.cx-a.cx,r.cy-a.cy);if(d>fd){fd=d;far=r}}
   entrance={x:a.cx*T+8,y:a.cy*T+8};stairs={x:far.cx*T+8,y:far.cy*T+8};
   for(const r of rooms){if(r===a)continue;const n=3+floor+(Math.random()*4|0);for(let i=0;i<n;i++)spawnEnemy((r.x+1+Math.random()*(r.w-2))*T,(r.y+1+Math.random()*(r.h-2))*T)}}
- P.x=entrance.x;P.y=entrance.y;P.hp=P.mhp;P.inv=1.5;spawnT=0;time=0;save();
+ P.x=entrance.x;P.y=entrance.y;P.hp=P.mhp;floorBgm();P.inv=1.5;spawnT=0;time=0;save();
 }
 function spawnEnemy(x,y,typeIdx){const max=Math.min(ETYPES.length,1+Math.floor((floor+1)/2));const t=ETYPES[typeIdx??(Math.random()*max|0)];const k=1+floor*0.22;
  enemies.push({x,y,t,hp:t.hp*k,mhp:t.hp*k,sp:t.sp*(1+floor*0.015),dmg:t.dmg*(1+floor*0.1),xp:t.xp,r:t.r,hit:0,kx:0,ky:0})}
 function spawnBoss(){const tier=Math.floor(floor/5)-1,b=BOSSES[tier%4],lap=Math.floor(tier/4);const hp=(600+tier*700)*(1+lap*2);
- boss={x:15*T+8,y:6*T,t:{s:null},bd:b,hp,mhp:hp,sp:20+tier*3,dmg:20+tier*8,xp:50,r:12+tier,hit:0,kx:0,ky:0,isBoss:1,atk:2,tier};enemies.push(boss);bossPhase=2;
+ boss={x:15*T+8,y:6*T,t:{s:null},bd:b,hp,mhp:hp,sp:20+tier*3,dmg:20+tier*8,xp:50,r:12+tier,hit:0,kx:0,ky:0,isBoss:1,atk:2,tier};enemies.push(boss);bossPhase=2;SND.play('se_boss',0.7);floorBgm();
  fx.push({type:'text',x:boss.x,y:boss.y,txt:b.n+' 出現！',life:2.5})}
 // ---------- input ----------
 const keys={};addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=1;if(e.key==='Escape'||e.key==='p')togglePause()});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
@@ -111,9 +124,9 @@ function near(x,y,r,cb){const x0=((x-r)/GS)|0,x1=((x+r)/GS)|0,y0=((y-r)/GS)|0,y1
 // ---------- combat ----------
 function dmgMul(){return 1+0.15*stat('might')}
 function areaMul(){return 1+0.12*stat('area')}
-function hurt(e,d,kx,ky){if(e.hp<=0)return;d*=dmgMul();e.hp-=d;if(P.sp.lifesteal)P.hp=Math.min(P.mhp,P.hp+d*0.012*P.sp.lifesteal);e.hit=0.1;if(!e.isBoss){e.kx+=kx||0;e.ky+=ky||0}
+function hurt(e,d,kx,ky){if(e.hp<=0)return;d*=dmgMul();e.hp-=d;if(P.sp.lifesteal)P.hp=Math.min(P.mhp,P.hp+d*0.012*P.sp.lifesteal);e.hit=0.1;SND.play('se_hit',0.25,0.07);if(!e.isBoss){e.kx+=kx||0;e.ky+=ky||0}
  if(fx.length<150)fx.push({type:'num',x:e.x,y:e.y-6,txt:Math.round(d),life:0.5});
- if(e.hp<=0){kills++;if(e.isBoss){for(let i=0;i<30;i++)gems.push({x:e.x+(Math.random()-.5)*40,y:e.y+(Math.random()-.5)*40,v:5});bossPhase=3;stairs={x:15*T+8,y:15*T+8};boss=null;chests.push({x:15*T+8,y:11*T+8});
+ if(e.hp<=0){kills++;SND.play('se_kill',0.3,0.05);if(e.isBoss){for(let i=0;i<30;i++)gems.push({x:e.x+(Math.random()-.5)*40,y:e.y+(Math.random()-.5)*40,v:5});bossPhase=3;SND.bgm('bgm_floor');SND.play('se_lvup',0.6);stairs={x:15*T+8,y:15*T+8};boss=null;chests.push({x:15*T+8,y:11*T+8});
    fx.push({type:'text',x:e.x,y:e.y,txt:'撃破！階段が出現',life:3})}
   else{gems.push({x:e.x,y:e.y,v:e.xp});if(Math.random()<0.015)gems.push({x:e.x,y:e.y,heal:1})}}}
 function nearestEnemy(r){let best=null,bd=r*r;near(P.x,P.y,r,e=>{const d=(e.x-P.x)**2+(e.y-P.y)**2;if(d<bd){bd=d;best=e}});return best}
@@ -143,8 +156,8 @@ function gainXP(v){P.xp+=v*(1+0.5*(P.sp.dblxp||0));while(P.xp>=P.nx){P.xp-=P.nx;
 let pendingLv=0;
 function openChest(){const pool=Object.keys(SPEC).filter(k=>((SPEC[k].w?P.w[k]:P.sp[k])||0)<5);let k=pool[(Math.random()*pool.length)|0],D,lvTxt;
  if(!k){P.mhp+=20;P.hp=P.mhp;D={n:'生命の秘薬',d:'最大HP+20・全回復'};lvTxt=''}else{D=SPEC[k];const tgt=D.w?P.w:P.sp;tgt[k]=(tgt[k]||0)+1;lvTxt=tgt[k]>1?' Lv'+tgt[k]:' NEW'}
- $('treName').textContent='★'+D.n+lvTxt;$('treDesc').textContent=D.d+'（宝箱限定）';state='tre';$('tre').classList.add('on');save()}
-function showLevel(){state='lvl';const pool=[];for(const k in WDEF){const L=P.w[k]||0;if(L<8&&(L>0||Object.keys(P.w).filter(x=>WDEF[x]).length<5))pool.push({k,w:1,L})}for(const k in STATS)if(stat(k)<6)pool.push({k,w:0,L:stat(k)});
+ SND.play('se_chest',0.7);SND.play('se_item',0.5);$('treName').textContent='★'+D.n+lvTxt;$('treDesc').textContent=D.d+'（宝箱限定）';state='tre';$('tre').classList.add('on');save()}
+function showLevel(){state='lvl';SND.play('se_lvup',0.5);const pool=[];for(const k in WDEF){const L=P.w[k]||0;if(L<8&&(L>0||Object.keys(P.w).filter(x=>WDEF[x]).length<5))pool.push({k,w:1,L})}for(const k in STATS)if(stat(k)<6)pool.push({k,w:0,L:stat(k)});
  pool.sort(()=>Math.random()-.5);const ch=$('choices');ch.innerHTML='';
  for(const o of pool.slice(0,3)){const b=document.createElement('button');b.className='card';const D=o.w?WDEF[o.k]:STATS[o.k];
   b.innerHTML=`<b>${D.n}</b> ${o.L?'Lv'+(o.L+1):(o.w?'<span style="color:#7f7">NEW</span>':'')}<br>${D.d}${o.w&&o.L?'（強化）':''}`;
@@ -175,23 +188,23 @@ function update(dt){time+=dt;
   near(e.x,e.y,10,o=>{if(o!==e){const sx=e.x-o.x,sy=e.y-o.y,sd=sx*sx+sy*sy;if(sd<64&&sd>0.01){const s=1/Math.sqrt(sd);vx+=sx*s*25;vy+=sy*s*25}}});
   vx+=e.kx*8;vy+=e.ky*8;e.kx*=0.85;e.ky*=0.85;
   if(e.isBoss){e.x+=vx*dt;e.y+=vy*dt;e.x=Math.max(3*T,Math.min((MW-3)*T,e.x));e.y=Math.max(3*T,Math.min((MH-3)*T,e.y))}else moveCirc(e,vx*dt,vy*dt,3);
-  if(d<e.r+4&&P.inv<=0){if(P.sp.thorns)hurt(e,15*P.sp.thorns+e.mhp*0.05*P.sp.thorns);P.hp-=e.dmg;P.inv=0.5;fx.push({type:'flash',life:0.15})}}
+  if(d<e.r+4&&P.inv<=0){if(P.sp.thorns)hurt(e,15*P.sp.thorns+e.mhp*0.05*P.sp.thorns);P.hp-=e.dmg;P.inv=0.5;SND.play('se_hurt',0.5);fx.push({type:'flash',life:0.15})}}
  for(let i=enemies.length-1;i>=0;i--)if(enemies[i].hp<=0){enemies[i]=enemies[enemies.length-1];enemies.pop()}
  // bullets
  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.life-=dt;if(b.g)b.vy+=b.g*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;if(b.rot!==undefined)b.rot+=dt*12;
-  if(b.enemy){if((b.x-P.x)**2+(b.y-P.y)**2<36&&P.inv<=0){P.hp-=b.d;P.inv=0.5;b.life=0}}
+  if(b.enemy){if((b.x-P.x)**2+(b.y-P.y)**2<36&&P.inv<=0){P.hp-=b.d;P.inv=0.5;SND.play('se_hurt',0.5);b.life=0}}
   else{if(b.k==='bolt'&&solid((b.x/T)|0,(b.y/T)|0))b.life=0;
    near(b.x,b.y,b.r+12,e=>{if(b.life<=0||e.hp<=0)return;if((e.x-b.x)**2+(e.y-b.y)**2<(b.r+e.r)**2){if(b.hitset){if(b.hitset.has(e))return;b.hitset.add(e)}hurt(e,b.d,b.vx*0.05,b.vy*0.05);if(--b.pierce<=0)b.life=0}})}
   if(b.life<=0){bullets[i]=bullets[bullets.length-1];bullets.pop()}}
  // gems
  const mag=(24*(1+0.4*stat('magnet')))**2;
  for(let i=gems.length-1;i>=0;i--){const g=gems[i],dx=P.x-g.x,dy=P.y-g.y,d2=dx*dx+dy*dy;if(d2<mag||g.pull){g.pull=1;const d=Math.sqrt(d2)||1;g.x+=dx/d*200*dt;g.y+=dy/d*200*dt}
-  if(d2<64){if(g.heal)P.hp=Math.min(P.mhp,P.hp+30);else gainXP(g.v);gems[i]=gems[gems.length-1];gems.pop()}}
+  if(d2<64){SND.play('se_xp',0.15,0.04);if(g.heal)P.hp=Math.min(P.mhp,P.hp+30);else gainXP(g.v);gems[i]=gems[gems.length-1];gems.pop()}}
  if(gems.length>400){let s=0;for(const g of gems.splice(0,100))s+=g.v||0;gems.push({x:P.x+20,y:P.y,v:s})}
  for(let i=fx.length-1;i>=0;i--){fx[i].life-=dt;if(fx[i].life<=0)fx.splice(i,1)}
  for(const c of chests)if(!c.open&&Math.hypot(P.x-c.x,P.y-c.y)<12){c.open=1;openChest();break}
  // stairs
- if(stairs&&Math.hypot(P.x-stairs.x,P.y-stairs.y)<10){floor++;genFloor();fx.push({type:'text',x:P.x,y:P.y-20,txt:'B'+floor+'F'+(floor%5===0?' ボスフロア！':''),life:2.5})}
+ if(stairs&&Math.hypot(P.x-stairs.x,P.y-stairs.y)<10){SND.play('se_stairs',0.6);floor++;genFloor();fx.push({type:'text',x:P.x,y:P.y-20,txt:'B'+floor+'F'+(floor%5===0?' ボスフロア！':''),life:2.5})}
  if(P.hp<=0&&(P.sp.revive||0)>P.revUsed){P.revUsed++;P.hp=P.mhp*0.5;P.inv=2;fx.push({type:'text',txt:'不死鳥の羽で復活！',life:2});near(P.x,P.y,80,e=>hurt(e,50))}
  if(P.hp<=0){P.hp=0;state='dead';$('dead').classList.add('on');$('pause').style.display='none'}
  if(pendingLv>0&&state==='play')showLevel();
@@ -199,22 +212,22 @@ function update(dt){time+=dt;
 // ---------- render ----------
 function draw(){const camX=Math.round(P.x-VW/2),camY=Math.round(P.y-VH/2);cx.fillStyle='#000';cx.fillRect(0,0,VW,VH);
  const x0=Math.max(0,(camX/T)|0),y0=Math.max(0,(camY/T)|0),x1=Math.min(MW-1,((camX+VW)/T)|0),y1=Math.min(MH-1,((camY+VH)/T)|0);
- for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const w=map[y*MW+x];if(w){if(y+1<MH&&!map[(y+1)*MW+x])cx.drawImage(tWall,x*T-camX,y*T-camY)}else cx.drawImage(tFloor,x*T-camX,y*T-camY)}
- if(stairs){const sx=stairs.x-camX-8,sy=stairs.y-camY-8;cx.fillStyle='#000';cx.fillRect(sx,sy,16,16);cx.fillStyle='#aaa';for(let i=0;i<4;i++)cx.fillRect(sx+i*2,sy+i*4,16-i*4,2);
+ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const w=map[y*MW+x];if(ASSET){const X=x*T-camX,Y=y*T-camY;if(!w){const h=(x*7349^y*9157)&31;dspr(h<20?'floor_1':'floor_'+(2+h%7),X+8,Y+16)}else if(y+1<MH&&!map[(y+1)*MW+x])dspr('wall_mid',X+8,Y+16);else if((y+2<MH&&!map[(y+2)*MW+x])||(x>0&&!map[y*MW+x-1])||(x+1<MW&&!map[y*MW+x+1])||(y>0&&!map[(y-1)*MW+x]))dspr('wall_top_mid',X+8,Y+16);continue}if(w){if(y+1<MH&&!map[(y+1)*MW+x])cx.drawImage(tWall,x*T-camX,y*T-camY)}else cx.drawImage(tFloor,x*T-camX,y*T-camY)}
+ if(stairs){const sx=stairs.x-camX-8,sy=stairs.y-camY-8;if(ASSET)dspr('floor_ladder',sx+8,sy+16);else{cx.fillStyle='#000';cx.fillRect(sx,sy,16,16);cx.fillStyle='#aaa';for(let i=0;i<4;i++)cx.fillRect(sx+i*2,sy+i*4,16-i*4,2)}
   if(Math.abs(stairs.x-P.x)>VW/2||Math.abs(stairs.y-P.y)>VH/2){const a=Math.atan2(stairs.y-P.y,stairs.x-P.x);cx.fillStyle='#ff0';cx.fillRect(VW/2+Math.cos(a)*40-2,VH/2+Math.sin(a)*40-2,4,4)}}
- for(const c of chests){const x=(c.x-camX-6)|0,y=(c.y-camY-5)|0;cx.fillStyle='#6a3a10';cx.fillRect(x,y,12,10);cx.fillStyle=c.open?'#222':'#ffd84a';cx.fillRect(x,y+3,12,2);cx.fillRect(x+5,y+3,2,4);if(!c.open&&((time*3)|0)%2){cx.fillStyle='#fff';cx.fillRect(x+10,y-2,1,1)}
+ for(const c of chests){const x=(c.x-camX-6)|0,y=(c.y-camY-5)|0;if(ASSET)dspr('chest_full_open_anim_f'+(c.open?2:0),c.x-camX,c.y-camY+8);else{cx.fillStyle='#6a3a10';cx.fillRect(x,y,12,10);cx.fillStyle=c.open?'#222':'#ffd84a';cx.fillRect(x,y+3,12,2);cx.fillRect(x+5,y+3,2,4)}if(!c.open&&((time*3)|0)%2){cx.fillStyle='#fff';cx.fillRect(x+10,y-2,1,1)}
   if(!c.open&&(Math.abs(c.x-P.x)>VW/2||Math.abs(c.y-P.y)>VH/2)){const a=Math.atan2(c.y-P.y,c.x-P.x);cx.fillStyle='#fa0';cx.fillRect(VW/2+Math.cos(a)*48-2,VH/2+Math.sin(a)*48-2,4,4)}}
- for(const g of gems){const s=g.heal?S.heart:g.v>=5?S.gem3:g.v>=2?S.gem2:S.gem;cx.drawImage(s,(g.x-camX-1)|0,(g.y-camY-1)|0)}
+ for(const g of gems){if(g.heal&&ASSET){dspr('flask_big_red',g.x-camX,g.y-camY+8);continue}const s=g.heal?S.heart:g.v>=5?S.gem3:g.v>=2?S.gem2:S.gem;cx.drawImage(s,(g.x-camX-1)|0,(g.y-camY-1)|0)}
  if(P.w.aura){const R=(26+P.w.aura*5)*areaMul();cx.fillStyle='rgba(255,240,120,'+(0.12+0.05*Math.sin(time*6))+')';cx.beginPath();cx.arc(P.x-camX,P.y-camY,R,0,7);cx.fill()}
- for(const e of enemies){const ex=e.x-camX,ey=e.y-camY;if(ex<-40||ey<-40||ex>VW+40||ey>VH+40)continue;
-  if(e.isBoss){const im=e.bd.s,sc=e.bd.sz;cx.drawImage(im,(ex-im.width*sc/2)|0,(ey-im.height*sc/2)|0,im.width*sc,im.height*sc);if(e.hit>0){cx.fillStyle='rgba(255,255,255,.5)';cx.fillRect(ex-im.width*sc/2,ey-im.height*sc/2,im.width*sc,im.height*sc)}}
-  else{const im=S[e.t.s];const bob=(Math.sin(time*8+e.x)*1)|0;cx.drawImage(im,(ex-im.width/2)|0,(ey-im.height/2+bob)|0);if(e.hit>0){cx.fillStyle='rgba(255,255,255,.6)';cx.fillRect((ex-im.width/2)|0,(ey-im.height/2+bob)|0,im.width,im.height)}}}
- // player
- if(P.inv<=0||((time*20)|0)%2){cx.save();cx.translate((P.x-camX)|0,(P.y-camY)|0);if(P.face<0)cx.scale(-1,1);cx.drawImage(S.hero,-5,-6-(P.moving?(((time*10)|0)%2):0));cx.restore()}
- if(P.fam){const x=(P.fam.x-camX)|0,y=(P.fam.y-camY)|0;cx.fillStyle='#f8a';cx.fillRect(x-3,y-2,6,4);cx.fillStyle='#fff';cx.fillRect(x-2,y-1,1,1);cx.fillRect(x+1,y-1,1,1)}
+ for(const e of enemies){const ex=e.x-camX,ey=e.y-camY;if(ex<-60||ey<-80||ex>VW+60||ey>VH+80)continue;
+  if(ASSET){const an=e.isBoss?e.bd.a:e.t.a,sc=e.isBoss?e.bd.sc:1;dspr(an[((time*8+(e.x&7))|0)%4],ex,ey+(e.isBoss?e.r*0.6:5),e.x>P.x,sc,e.hit>0)}
+  else if(e.isBoss){const im=e.bd.s,sc=e.bd.sz;cx.drawImage(im,(ex-im.width*sc/2)|0,(ey-im.height*sc/2)|0,im.width*sc,im.height*sc)}
+  else{const im=S[e.t.s];cx.drawImage(im,(ex-im.width/2)|0,(ey-im.height/2)|0)}}
+ if(P.inv<=0||((time*20)|0)%2){if(ASSET)dspr((P.moving?A.knight_run:A.knight_idle)[((time*(P.moving?10:6))|0)%4],P.x-camX,P.y-camY+6,P.face<0,1,P.inv>0.3);else{cx.save();cx.translate((P.x-camX)|0,(P.y-camY)|0);if(P.face<0)cx.scale(-1,1);cx.drawImage(S.hero,-5,-6);cx.restore()}}
+ if(P.fam&&ASSET)dspr(A.angel[((time*8)|0)%4],P.fam.x-camX,P.fam.y-camY+8,P.fam.x>P.x);else if(P.fam){const x=(P.fam.x-camX)|0,y=(P.fam.y-camY)|0;cx.fillStyle='#f8a';cx.fillRect(x-3,y-2,6,4);cx.fillStyle='#fff';cx.fillRect(x-2,y-1,1,1);cx.fillRect(x+1,y-1,1,1)}
  if(P.w.orb){const L=P.w.orb,n=1+L,R=(28+L*2)*areaMul();cx.fillStyle='#8ff';for(let i=0;i<n;i++){const a=P.orbA+i*Math.PI*2/n;cx.fillRect((P.x+Math.cos(a)*R-camX-2)|0,(P.y+Math.sin(a)*R-camY-2)|0,4,4)}}
  for(const b of bullets){const bx=(b.x-camX)|0,by=(b.y-camY)|0;if(b.enemy){cx.fillStyle='#f4f';cx.fillRect(bx-2,by-2,4,4)}else if(b.k==='bolt'){cx.fillStyle='#fff';cx.fillRect(bx-1,by-1,3,3);cx.fillStyle='#6cf';cx.fillRect(bx-2,by,1,1)}
-  else{cx.save();cx.translate(bx,by);cx.rotate(b.rot);cx.fillStyle='#aaa';cx.fillRect(-4,-1,8,2);cx.fillStyle='#ddd';cx.fillRect(2,-4,3,6);cx.restore()}}
+  else if(ASSET){cx.save();cx.translate(bx,by);cx.rotate(b.rot);const f=F.weapon_axe;cx.drawImage(SHEET,f[0],f[1],f[2],f[3],-f[2]/2|0,-f[3]/2|0,f[2],f[3]);cx.restore()}else{cx.save();cx.translate(bx,by);cx.rotate(b.rot);cx.fillStyle='#aaa';cx.fillRect(-4,-1,8,2);cx.fillStyle='#ddd';cx.fillRect(2,-4,3,6);cx.restore()}}
  cx.textAlign='center';cx.font='8px monospace';
  for(const f of fx){if(f.type==='whip'){cx.fillStyle='rgba(255,255,255,'+f.life*5+')';const x=f.s>0?P.x-camX:P.x-camX-f.w;cx.fillRect(x,P.y-camY-3,f.w,4)}
   else if(f.type==='zap'){cx.strokeStyle='#ffff80';cx.beginPath();cx.moveTo(f.x-camX,f.y-camY);cx.lineTo((f.x+f.x2)/2-camX+(Math.random()-.5)*8,(f.y+f.y2)/2-camY+(Math.random()-.5)*8);cx.lineTo(f.x2-camX,f.y2-camY);cx.stroke()}
@@ -240,14 +253,29 @@ function draw(){const camX=Math.round(P.x-VW/2),camY=Math.round(P.y-VH/2);cx.fil
 let last=performance.now();
 function loop(now){let dt=Math.min(0.05,(now-last)/1000);last=now;if(state==='play')update(dt);if(P&&map)draw();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
+// ---------- audio ----------
+const SND=(()=>{let ctx=null,on=true,buf={},cur=null,curName='',want='';try{on=localStorage.getItem('dsurv_snd')!=='0'}catch(e){}
+ const names=['bgm_title','bgm_floor','bgm_swarm','bgm_boss','se_hit','se_kill','se_xp','se_lvup','se_chest','se_hurt','se_stairs','se_boss','se_item'];const last={};
+ function load(n){if(buf[n]!==undefined)return;buf[n]=null;fetch('assets/audio/'+n+'.mp3').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()}).then(a=>new Promise((ok,ng)=>ctx.decodeAudioData(a,ok,ng))).then(b=>{buf[n]=b;if(n===want&&curName!==n)bgm(n)}).catch(()=>{})}
+ function unlock(){try{if(!ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;ctx=new AC();names.forEach(load)}if(ctx.state==='suspended')ctx.resume().catch(()=>{});if(want&&curName!==want)bgm(want)}catch(e){}}
+ function play(n,vol,gap){try{if(!on||!ctx||!buf[n])return;const t=ctx.currentTime;if(gap&&last[n]&&t-last[n]<gap)return;last[n]=t;const s=ctx.createBufferSource(),g=ctx.createGain();g.gain.value=vol||0.5;s.buffer=buf[n];s.connect(g).connect(ctx.destination);s.start()}catch(e){}}
+ function stop(){try{if(cur){cur.s.stop();cur=null}}catch(e){cur=null}curName=''}
+ function bgm(n){want=n;try{if(!ctx||!on){stop();return}if(curName===n)return;stop();if(!buf[n])return;const s=ctx.createBufferSource(),g=ctx.createGain();g.gain.value=0.35;s.buffer=buf[n];s.loop=true;s.connect(g).connect(ctx.destination);s.start();cur={s};curName=n}catch(e){}}
+ function toggle(){on=!on;try{localStorage.setItem('dsurv_snd',on?'1':'0')}catch(e){}if(on){unlock();bgm(want)}else stop();label()}
+ function label(){document.querySelectorAll('.bSnd').forEach(b=>b.textContent=on?'🔊 サウンド: ON':'🔇 サウンド: OFF')}
+ ['pointerdown','touchend','keydown','click'].forEach(ev=>addEventListener(ev,unlock,{passive:true,capture:true}));
+ return{play,bgm,toggle,label,get loaded(){return Object.keys(buf).filter(k=>buf[k]).length},get playing(){return curName}}})();
+SND.label();SND.bgm('bgm_title');
+function floorBgm(){SND.bgm(bossPhase===1?'bgm_swarm':bossPhase===2?'bgm_boss':'bgm_floor')}
 function startGame(cont){if(state==='play')return;const s=cont&&load();P=newPlayer();floor=1;if(s){floor=s.floor||1;Object.assign(P,s.P);P.w=P.w||{bolt:1};P.st=P.st||{};P.sp=P.sp||{};P.cd={}}pendingLv=0;genFloor();
  fx.push({type:'text',x:0,y:0,txt:'B'+floor+'F'+(floor%5===0?' ボスフロア！5分耐えろ！':''),life:2.5});
  $('title').classList.remove('on');$('pause').style.display='block';state='play';last=performance.now()}
 function tap(el,fn){let t=0;const h=e=>{const n=Date.now();if(n-t<400)return;t=n;try{fn()}catch(err){console.error(err)}};el.addEventListener('click',h);el.addEventListener('touchend',h,{passive:true})}
 tap($('bNew'),()=>startGame(false));tap($('bCont'),()=>startGame(true));if(!load())$('bCont').style.display='none';
 function togglePause(){if(state==='play'){state='pause';$('pz').classList.add('on')}else if(state==='pause'){state='play';$('pz').classList.remove('on');last=performance.now()}}
+document.querySelectorAll('.bSnd').forEach(b=>tap(b,()=>SND.toggle()));tap($('bCred'),()=>$('cred').classList.add('on'));tap($('bCredX'),()=>$('cred').classList.remove('on'));
 tap($('bTre'),()=>{$('tre').classList.remove('on');state='play';last=performance.now()});tap($('pause'),togglePause);tap($('bRes'),togglePause);
-tap($('bTitle'),()=>{save();$('pz').classList.remove('on');$('pause').style.display='none';state='title';$('bCont').style.display='';$('title').classList.add('on')});
+tap($('bTitle'),()=>{save();$('pz').classList.remove('on');$('pause').style.display='none';state='title';SND.bgm('bgm_title');$('bCont').style.display='';$('title').classList.add('on')});
 tap($('bRetry'),()=>{$('dead').classList.remove('on');genFloor();fx.push({type:'text',x:0,y:0,txt:'B'+floor+'F 再挑戦！',life:2});$('pause').style.display='block';state='play'});
-window.__dbg={get P(){return P},get enemies(){return enemies},setFloor(f){floor=f;genFloor()},get state(){return state},get chests(){return chests},get bossTimer(){return bossTimer},openChest};
+window.__dbg={get P(){return P},get enemies(){return enemies},setFloor(f){floor=f;genFloor()},get state(){return state},SND,skip(){bossTimer=0.3},get ASSET(){return ASSET},get chests(){return chests},get bossTimer(){return bossTimer},openChest};
 </script></body></html>
