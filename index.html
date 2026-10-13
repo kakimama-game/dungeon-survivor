@@ -10,10 +10,11 @@ button{font-size:18px;margin:6px;padding:12px 24px;border:3px solid #fff;backgro
 .card{display:block;width:100%;max-width:340px;text-align:left;font-size:15px}
 .card b{color:#ffd84a}
 h1{font-size:28px;color:#ffd84a;text-shadow:3px 3px #a02}
+#spd{position:fixed;right:64px;top:calc(8px + env(safe-area-inset-top));z-index:4;min-width:0;padding:6px 10px;font-size:16px;margin:0;display:none}
 #pause{position:fixed;right:8px;top:calc(8px + env(safe-area-inset-top));z-index:4;min-width:0;padding:6px 12px;font-size:16px;margin:0;display:none}
 </style></head><body>
 <canvas id="c"></canvas>
-<button id="pause">⏸</button>
+<button id="pause">⏸</button><button id="spd" class="spdB">»1x</button>
 <div class="ov on" id="title"><h1>ダンジョンサバイバー</h1><p>迫りくる魔物をなぎ倒し、<br>ダンジョンの奥深くへ！</p>
 <button id="bNew">はじめから</button><button id="bCont">つづきから</button><button class="bSnd">🔊 サウンド: ON</button><button id="bCred">クレジット</button>
 <p style="font-size:13px;opacity:.8">スマホ：画面をドラッグで移動<br>PC：WASD / 矢印キー　攻撃は自動</p></div>
@@ -24,7 +25,7 @@ h1{font-size:28px;color:#ffd84a;text-shadow:3px 3px #a02}
 <p><b>BGM</b><br>「5 Chiptunes (Action)」 by Juhani Junkala<br>ライセンス: CC0 1.0<br>https://opengameart.org/content/5-chiptunes-action</p>
 <p><b>効果音</b><br>「Impact Sounds」「RPG Audio」「Digital Audio」 by Kenney (www.kenney.nl)<br>ライセンス: CC0 1.0<br>https://kenney.nl/assets/impact-sounds<br>https://kenney.nl/assets/rpg-audio<br>https://kenney.nl/assets/digital-audio</p>
 <p>素晴らしい素材をありがとうございます！</p></div><button id="bCredX">もどる</button></div>
-<div class="ov" id="pz"><h2>ポーズ</h2><button id="bRes">つづける</button><button class="bSnd">🔊 サウンド: ON</button><button id="bTitle">タイトルへ</button></div>
+<div class="ov" id="pz"><h2>ポーズ</h2><button id="bRes">つづける</button><button class="spdB" id="spd2">»1x</button><button class="bSnd">🔊 サウンド: ON</button><button id="bTitle">タイトルへ</button></div>
 <div class="ov" id="dead"><h2 style="color:#f55">やられた…</h2><p>何も失わずにこの階の入口から再挑戦！</p><button id="bRetry">再挑戦</button></div>
 <script>
 "use strict";
@@ -206,7 +207,7 @@ function update(dt){time+=dt;
  // stairs
  if(stairs&&Math.hypot(P.x-stairs.x,P.y-stairs.y)<10){SND.play('se_stairs',0.6);floor++;genFloor();fx.push({type:'text',x:P.x,y:P.y-20,txt:'B'+floor+'F'+(floor%5===0?' ボスフロア！':''),life:2.5})}
  if(P.hp<=0&&(P.sp.revive||0)>P.revUsed){P.revUsed++;P.hp=P.mhp*0.5;P.inv=2;fx.push({type:'text',txt:'不死鳥の羽で復活！',life:2});near(P.x,P.y,80,e=>hurt(e,50))}
- if(P.hp<=0){P.hp=0;state='dead';$('dead').classList.add('on');$('pause').style.display='none'}
+ if(P.hp<=0){P.hp=0;state='dead';$('dead').classList.add('on');($('pause').style.display='none',$('spd').style.display='none')}
  if(pendingLv>0&&state==='play')showLevel();
 }
 // ---------- render ----------
@@ -250,8 +251,11 @@ function draw(){const camX=Math.round(P.x-VW/2),camY=Math.round(P.y-VH/2);cx.fil
  if(bossPhase===3)cx.fillText('中央の階段へ進もう！',VW/2,48);
 }
 // ---------- loop ----------
+const SPDS=[1,1.5,2,3];let SPD=1;try{const v=parseFloat(localStorage.getItem('dsurv_spd'));if(SPDS.includes(v))SPD=v}catch(e){}
+function spdLabel(){document.querySelectorAll('.spdB').forEach(b=>b.textContent='»'+SPD+'x')}
+function cycleSpd(){SPD=SPDS[(SPDS.indexOf(SPD)+1)%SPDS.length];try{localStorage.setItem('dsurv_spd',String(SPD))}catch(e){}spdLabel()}
 let last=performance.now();
-function loop(now){let dt=Math.min(0.05,(now-last)/1000);last=now;if(state==='play')update(dt);if(P&&map)draw();requestAnimationFrame(loop)}
+function loop(now){let dt=Math.min(0.05,(now-last)/1000);last=now;if(state==='play'){const acc=dt*SPD;const n=Math.min(8,Math.max(1,Math.ceil(acc/0.017)));for(let i=0;i<n&&state==='play';i++)update(acc/n)}if(P&&map)draw();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 // ---------- audio ----------
 const SND=(()=>{let ctx=null,on=true,buf={},cur=null,curName='',want='';try{on=localStorage.getItem('dsurv_snd')!=='0'}catch(e){}
@@ -269,13 +273,14 @@ SND.label();SND.bgm('bgm_title');
 function floorBgm(){SND.bgm(bossPhase===1?'bgm_swarm':bossPhase===2?'bgm_boss':'bgm_floor')}
 function startGame(cont){if(state==='play')return;const s=cont&&load();P=newPlayer();floor=1;if(s){floor=s.floor||1;Object.assign(P,s.P);P.w=P.w||{bolt:1};P.st=P.st||{};P.sp=P.sp||{};P.cd={}}pendingLv=0;genFloor();
  fx.push({type:'text',x:0,y:0,txt:'B'+floor+'F'+(floor%5===0?' ボスフロア！5分耐えろ！':''),life:2.5});
- $('title').classList.remove('on');$('pause').style.display='block';state='play';last=performance.now()}
+ $('title').classList.remove('on');($('pause').style.display='block',$('spd').style.display='block');state='play';last=performance.now()}
 function tap(el,fn){let t=0;const h=e=>{const n=Date.now();if(n-t<400)return;t=n;try{fn()}catch(err){console.error(err)}};el.addEventListener('click',h);el.addEventListener('touchend',h,{passive:true})}
 tap($('bNew'),()=>startGame(false));tap($('bCont'),()=>startGame(true));if(!load())$('bCont').style.display='none';
 function togglePause(){if(state==='play'){state='pause';$('pz').classList.add('on')}else if(state==='pause'){state='play';$('pz').classList.remove('on');last=performance.now()}}
 document.querySelectorAll('.bSnd').forEach(b=>tap(b,()=>SND.toggle()));tap($('bCred'),()=>$('cred').classList.add('on'));tap($('bCredX'),()=>$('cred').classList.remove('on'));
+document.querySelectorAll('.spdB').forEach(b=>tap(b,cycleSpd));spdLabel();
 tap($('bTre'),()=>{$('tre').classList.remove('on');state='play';last=performance.now()});tap($('pause'),togglePause);tap($('bRes'),togglePause);
-tap($('bTitle'),()=>{save();$('pz').classList.remove('on');$('pause').style.display='none';state='title';SND.bgm('bgm_title');$('bCont').style.display='';$('title').classList.add('on')});
-tap($('bRetry'),()=>{$('dead').classList.remove('on');genFloor();fx.push({type:'text',x:0,y:0,txt:'B'+floor+'F 再挑戦！',life:2});$('pause').style.display='block';state='play'});
-window.__dbg={get P(){return P},get enemies(){return enemies},setFloor(f){floor=f;genFloor()},get state(){return state},SND,skip(){bossTimer=0.3},get ASSET(){return ASSET},get chests(){return chests},get bossTimer(){return bossTimer},openChest};
+tap($('bTitle'),()=>{save();$('pz').classList.remove('on');($('pause').style.display='none',$('spd').style.display='none');state='title';SND.bgm('bgm_title');$('bCont').style.display='';$('title').classList.add('on')});
+tap($('bRetry'),()=>{$('dead').classList.remove('on');genFloor();fx.push({type:'text',x:0,y:0,txt:'B'+floor+'F 再挑戦！',life:2});($('pause').style.display='block',$('spd').style.display='block');state='play'});
+window.__dbg={get P(){return P},get enemies(){return enemies},setFloor(f){floor=f;genFloor()},get state(){return state},SND,get SPD(){return SPD},get ASSET(){return ASSET},get chests(){return chests},get bossTimer(){return bossTimer},openChest};
 </script></body></html>
