@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes"><title>ダンジョン・サバイバー</title>
+<meta name="apple-mobile-web-app-capable" content="yes"><title>ダンジョンサバイバー</title>
 <style>
 html,body{margin:0;height:100%;background:#000;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;font-family:sans-serif;color:#fff}
 canvas{position:fixed;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
@@ -14,10 +14,11 @@ h1{font-size:28px;color:#ffd84a;text-shadow:3px 3px #a02}
 </style></head><body>
 <canvas id="c"></canvas>
 <button id="pause">⏸</button>
-<div class="ov on" id="title"><h1>ダンジョン<br>サバイバー</h1><p>迫りくる魔物をなぎ倒し、<br>ダンジョンの奥深くへ！</p>
+<div class="ov on" id="title"><h1>ダンジョンサバイバー</h1><p>迫りくる魔物をなぎ倒し、<br>ダンジョンの奥深くへ！</p>
 <button id="bNew">はじめから</button><button id="bCont">つづきから</button>
 <p style="font-size:13px;opacity:.8">スマホ：画面をドラッグで移動<br>PC：WASD / 矢印キー　攻撃は自動</p></div>
 <div class="ov" id="lvl"><h2>レベルアップ！</h2><div id="choices"></div></div>
+<div class="ov" id="tre"><div style="font-size:40px">🎁</div><h2 style="color:#ffd84a">宝箱を開けた！</h2><div id="treName" style="font-size:22px;font-weight:bold;color:#7ff"></div><p id="treDesc"></p><button id="bTre">OK</button></div>
 <div class="ov" id="pz"><h2>ポーズ</h2><button id="bRes">つづける</button><button id="bTitle">タイトルへ</button></div>
 <div class="ov" id="dead"><h2 style="color:#f55">やられた…</h2><p>何も失わずにこの階の入口から再挑戦！</p><button id="bRetry">再挑戦</button></div>
 <script>
@@ -52,26 +53,34 @@ let tFloor,tWall,tWallTop;
 function mkTiles(f){const th=THEMES[Math.floor((f-1)/5)%4];tFloor=tile(th[0],th[1],f*7+3);tWall=tile(th[2],th[3],f*13+1);const g=tWall.getContext('2d');g.fillStyle=th[3];for(let y=0;y<T;y+=4)g.fillRect(0,y,T,1);for(let y=0;y<T;y+=4)g.fillRect(((y/4)%2)*8,y,1,4)}
 // ---------- state ----------
 const SAVE='dsurv_save_v1';
-let P,map,MW,MH,floor=1,enemies=[],bullets=[],gems=[],fx=[],stairs=null,entrance,bossPhase=0,bossTimer=0,boss=null,state='title',time=0,spawnT=0,kills=0;
+let chests=[],P,map,MW,MH,floor=1,enemies=[],bullets=[],gems=[],fx=[],stairs=null,entrance,bossPhase=0,bossTimer=0,boss=null,state='title',time=0,spawnT=0,kills=0;
 const WDEF={
  bolt:{n:'マジックボルト',d:'最も近い敵へ魔法弾を撃つ'},
  whip:{n:'ムチ',d:'左右をなぎ払う'},
  orb:{n:'オービット',d:'周囲を回る光の玉'},
- aura:{n:'聖なるオーラ',d:'周囲の敵に継続ダメージ'},
  axe:{n:'トマホーク',d:'上に投げる重い斧（貫通）'},
  bomb:{n:'ファイアボム',d:'ランダムな場所に爆発'}};
+const SPEC={
+ aura:{n:'聖なるオーラ',d:'周囲の敵に継続ダメージ',w:1},
+ chain:{n:'チェインライトニング',d:'敵から敵へ連鎖する雷',w:1},
+ laser:{n:'ホーリーレーザー',d:'一直線に敵を貫く光線',w:1},
+ fam:{n:'使い魔',d:'あなたを追う使い魔が魔法弾を撃つ',w:1},
+ revive:{n:'不死鳥の羽',d:'各階でLv回まで倒れても復活（HP50%）'},
+ dblxp:{n:'知恵の書',d:'獲得経験値+50%/Lv'},
+ lifesteal:{n:'吸血の牙',d:'与ダメージの一部でHP回復'},
+ thorns:{n:'いばらの鎧',d:'触れた敵に反撃ダメージ'}};
 const STATS={might:{n:'ちから',d:'ダメージ+15%'},speed:{n:'すばやさ',d:'移動速度+10%'},maxhp:{n:'タフネス',d:'最大HP+20・全回復'},haste:{n:'クイック',d:'攻撃間隔-8%'},magnet:{n:'マグネット',d:'経験値を引き寄せる範囲+40%'},regen:{n:'リジェネ',d:'HPが毎秒0.5回復'},area:{n:'エリア',d:'攻撃範囲+12%'}};
-function newPlayer(){return{x:0,y:0,hp:100,mhp:100,lv:1,xp:0,nx:5,w:{bolt:1},st:{},cd:{},face:1,inv:0,orbA:0}}
+function newPlayer(){return{x:0,y:0,hp:100,mhp:100,lv:1,xp:0,nx:5,w:{bolt:1},st:{},sp:{},cd:{},face:1,inv:0,orbA:0}}
 function stat(k){return P.st[k]||0}
-function save(){try{localStorage.setItem(SAVE,JSON.stringify({floor,P:{hp:P.mhp,mhp:P.mhp,lv:P.lv,xp:P.xp,nx:P.nx,w:P.w,st:P.st}}))}catch(e){}}
+function save(){try{localStorage.setItem(SAVE,JSON.stringify({floor,P:{hp:P.mhp,mhp:P.mhp,lv:P.lv,xp:P.xp,nx:P.nx,w:P.w,st:P.st,sp:P.sp}}))}catch(e){}}
 function load(){try{return JSON.parse(localStorage.getItem(SAVE))}catch(e){return null}}
 // ---------- dungeon ----------
 function solid(tx,ty){return tx<0||ty<0||tx>=MW||ty>=MH||map[ty*MW+tx]===1}
 function genFloor(){
- mkTiles(floor);enemies.length=bullets.length=gems.length=fx.length=0;boss=null;
+ mkTiles(floor);enemies.length=bullets.length=gems.length=fx.length=0;chests.length=0;P.revUsed=0;boss=null;
  const isBoss=floor%5===0;
  if(isBoss){MW=30;MH=30;map=new Uint8Array(MW*MH).fill(1);for(let y=2;y<MH-2;y++)for(let x=2;x<MW-2;x++)map[y*MW+x]=0;
-  entrance={x:15*T+8,y:25*T+8};stairs=null;bossPhase=1;bossTimer=300;}
+  entrance={x:15*T+8,y:25*T+8};stairs=null;bossPhase=1;bossTimer=180;for(const [cx_,cy_] of [[5,6],[24,20]].sort(()=>Math.random()-.5).slice(0,1+(Math.random()*2|0)))chests.push({x:cx_*T+8,y:cy_*T+8});}
  else{bossPhase=0;MW=60;MH=60;map=new Uint8Array(MW*MH).fill(1);const rooms=[];
   for(let i=0;i<60&&rooms.length<10;i++){const w=6+(Math.random()*8|0),h=6+(Math.random()*8|0),x=2+(Math.random()*(MW-w-4)|0),y=2+(Math.random()*(MH-h-4)|0);
    if(rooms.some(r=>x<r.x+r.w+2&&x+w+2>r.x&&y<r.y+r.h+2&&y+h+2>r.y))continue;rooms.push({x,y,w,h,cx:x+(w>>1),cy:y+(h>>1)});
@@ -102,9 +111,9 @@ function near(x,y,r,cb){const x0=((x-r)/GS)|0,x1=((x+r)/GS)|0,y0=((y-r)/GS)|0,y1
 // ---------- combat ----------
 function dmgMul(){return 1+0.15*stat('might')}
 function areaMul(){return 1+0.12*stat('area')}
-function hurt(e,d,kx,ky){if(e.hp<=0)return;d*=dmgMul();e.hp-=d;e.hit=0.1;if(!e.isBoss){e.kx+=kx||0;e.ky+=ky||0}
+function hurt(e,d,kx,ky){if(e.hp<=0)return;d*=dmgMul();e.hp-=d;if(P.sp.lifesteal)P.hp=Math.min(P.mhp,P.hp+d*0.012*P.sp.lifesteal);e.hit=0.1;if(!e.isBoss){e.kx+=kx||0;e.ky+=ky||0}
  if(fx.length<150)fx.push({type:'num',x:e.x,y:e.y-6,txt:Math.round(d),life:0.5});
- if(e.hp<=0){kills++;if(e.isBoss){for(let i=0;i<30;i++)gems.push({x:e.x+(Math.random()-.5)*40,y:e.y+(Math.random()-.5)*40,v:5});bossPhase=3;stairs={x:15*T+8,y:15*T+8};boss=null;
+ if(e.hp<=0){kills++;if(e.isBoss){for(let i=0;i<30;i++)gems.push({x:e.x+(Math.random()-.5)*40,y:e.y+(Math.random()-.5)*40,v:5});bossPhase=3;stairs={x:15*T+8,y:15*T+8};boss=null;chests.push({x:15*T+8,y:11*T+8});
    fx.push({type:'text',x:e.x,y:e.y,txt:'撃破！階段が出現',life:3})}
   else{gems.push({x:e.x,y:e.y,v:e.xp});if(Math.random()<0.015)gems.push({x:e.x,y:e.y,heal:1})}}}
 function nearestEnemy(r){let best=null,bd=r*r;near(P.x,P.y,r,e=>{const d=(e.x-P.x)**2+(e.y-P.y)**2;if(d<bd){bd=d;best=e}});return best}
@@ -113,6 +122,13 @@ function fireWeapons(dt){const haste=Math.pow(0.92,stat('haste'));
   if(k==='orb'){P.orbA+=dt*(2.5+L*0.3);continue}
   if(k==='aura'){if(P.cd[k]<=0){P.cd[k]=0.5;const R=(26+L*5)*areaMul();near(P.x,P.y,R,e=>{if((e.x-P.x)**2+(e.y-P.y)**2<R*R)hurt(e,3+L*2)})}continue}
   if(P.cd[k]>0)continue;
+  if(k==='chain'){P.cd[k]=Math.max(0.6,1.6-L*0.12)*haste;let t=nearestEnemy(130);if(!t){P.cd[k]=0.2;continue}const hit=new Set();let px=P.x,py=P.y;
+   for(let j=0;j<3+L&&t;j++){hit.add(t);fx.push({type:'zap',x:px,y:py,x2:t.x,y2:t.y,life:0.15});hurt(t,10+L*5);px=t.x;py=t.y;let nb=null,bd=4900;near(px,py,70,e=>{if(!hit.has(e)&&e.hp>0){const d=(e.x-px)**2+(e.y-py)**2;if(d<bd){bd=d;nb=e}}});t=nb}continue}
+  if(k==='laser'){P.cd[k]=Math.max(0.8,2.2-L*0.15)*haste;const t=nearestEnemy(160);const a=t?Math.atan2(t.y-P.y,t.x-P.x):(P.face>0?0:Math.PI);const c=Math.cos(a),sn=Math.sin(a),Ln=220,W=(5+L)*areaMul();
+   fx.push({type:'beam',x:P.x,y:P.y,a,l:Ln,w:W,life:0.2});for(let st_=0;st_<Ln;st_+=GS){near(P.x+c*st_,P.y+sn*st_,GS,e=>{if(e._lz===time)return;const rx=e.x-P.x,ry=e.y-P.y,pr=rx*c+ry*sn,pd=Math.abs(-rx*sn+ry*c);if(pr>0&&pr<Ln&&pd<W+e.r){e._lz=time;hurt(e,18+L*8)}})}continue}
+  if(k==='fam'){if(!P.fam)P.fam={x:P.x,y:P.y};P.fam.x+=(P.x-20*P.face-P.fam.x)*Math.min(1,dt*3);P.fam.y+=(P.y-14-P.fam.y)*Math.min(1,dt*3);
+   if(P.cd[k]>0)continue;P.cd[k]=Math.max(0.25,0.8-L*0.08)*haste;let best=null,bd=150*150;near(P.fam.x,P.fam.y,150,e=>{const d=(e.x-P.fam.x)**2+(e.y-P.fam.y)**2;if(d<bd){bd=d;best=e}});if(!best){P.cd[k]=0.1;continue}
+   const a=Math.atan2(best.y-P.fam.y,best.x-P.fam.x);bullets.push({k:'bolt',x:P.fam.x,y:P.fam.y,vx:Math.cos(a)*200,vy:Math.sin(a)*200,life:1,d:7+L*3,pierce:1+(L>>1),r:3,fam:1});continue}
   if(k==='bolt'){P.cd[k]=Math.max(0.15,0.9-L*0.07)*haste;const t=nearestEnemy(160);if(!t){P.cd[k]=0.1;continue}
    const n=1+Math.floor(L/2);for(let i=0;i<n;i++){const a=Math.atan2(t.y-P.y,t.x-P.x)+(i-(n-1)/2)*0.15;bullets.push({k,x:P.x,y:P.y,vx:Math.cos(a)*180,vy:Math.sin(a)*180,life:1.2,d:8+L*3,pierce:L>=5?2:1,r:3})}}
   if(k==='whip'){P.cd[k]=Math.max(0.5,1.4-L*0.1)*haste;const W=(40+L*6)*areaMul(),dirs=L>=3?[1,-1]:[P.face];
@@ -123,9 +139,12 @@ function fireWeapons(dt){const haste=Math.pow(0.92,stat('haste'));
  if(P.w.orb){const L=P.w.orb,n=1+L,R=(28+L*2)*areaMul();P.cd.orbHit=(P.cd.orbHit||0)-dt;if(P.cd.orbHit<=0){P.cd.orbHit=0.25;
   for(let i=0;i<n;i++){const a=P.orbA+i*Math.PI*2/n,ox=P.x+Math.cos(a)*R,oy=P.y+Math.sin(a)*R;near(ox,oy,10,e=>{if((e.x-ox)**2+(e.y-oy)**2<100)hurt(e,6+L*3,Math.cos(a)*20,Math.sin(a)*20)})}}}}
 // ---------- level up ----------
-function gainXP(v){P.xp+=v;while(P.xp>=P.nx){P.xp-=P.nx;P.lv++;P.nx=Math.floor(5+P.lv*4+P.lv*P.lv*0.3);pendingLv++}}
+function gainXP(v){P.xp+=v*(1+0.5*(P.sp.dblxp||0));while(P.xp>=P.nx){P.xp-=P.nx;P.lv++;P.nx=Math.floor(5+P.lv*4+P.lv*P.lv*0.3);pendingLv++}}
 let pendingLv=0;
-function showLevel(){state='lvl';const pool=[];for(const k in WDEF){const L=P.w[k]||0;if(L<8&&(L>0||Object.keys(P.w).length<6))pool.push({k,w:1,L})}for(const k in STATS)if(stat(k)<6)pool.push({k,w:0,L:stat(k)});
+function openChest(){const pool=Object.keys(SPEC).filter(k=>((SPEC[k].w?P.w[k]:P.sp[k])||0)<5);let k=pool[(Math.random()*pool.length)|0],D,lvTxt;
+ if(!k){P.mhp+=20;P.hp=P.mhp;D={n:'生命の秘薬',d:'最大HP+20・全回復'};lvTxt=''}else{D=SPEC[k];const tgt=D.w?P.w:P.sp;tgt[k]=(tgt[k]||0)+1;lvTxt=tgt[k]>1?' Lv'+tgt[k]:' NEW'}
+ $('treName').textContent='★'+D.n+lvTxt;$('treDesc').textContent=D.d+'（宝箱限定）';state='tre';$('tre').classList.add('on');save()}
+function showLevel(){state='lvl';const pool=[];for(const k in WDEF){const L=P.w[k]||0;if(L<8&&(L>0||Object.keys(P.w).filter(x=>WDEF[x]).length<5))pool.push({k,w:1,L})}for(const k in STATS)if(stat(k)<6)pool.push({k,w:0,L:stat(k)});
  pool.sort(()=>Math.random()-.5);const ch=$('choices');ch.innerHTML='';
  for(const o of pool.slice(0,3)){const b=document.createElement('button');b.className='card';const D=o.w?WDEF[o.k]:STATS[o.k];
   b.innerHTML=`<b>${D.n}</b> ${o.L?'Lv'+(o.L+1):(o.w?'<span style="color:#7f7">NEW</span>':'')}<br>${D.d}${o.w&&o.L?'（強化）':''}`;
@@ -141,8 +160,8 @@ function update(dt){time+=dt;
  moveCirc(P,mx*spd*dt,my*spd*dt,4);P.moving=ml>0;
  if(stat('regen'))P.hp=Math.min(P.mhp,P.hp+0.5*stat('regen')*dt);P.inv-=dt;
  // boss floor
- if(bossPhase===1){bossTimer-=dt;spawnT-=dt;const rate=Math.max(0.12,0.6-(300-bossTimer)/300*0.4-floor*0.01);
-  if(spawnT<=0&&enemies.length<350){spawnT=rate;const n=1+Math.floor((300-bossTimer)/60);for(let i=0;i<n;i++){const a=Math.random()*6.28,d=VW/2+40;let x=P.x+Math.cos(a)*d,y=P.y+Math.sin(a)*d;x=Math.max(3*T,Math.min((MW-3)*T,x));y=Math.max(3*T,Math.min((MH-3)*T,y));spawnEnemy(x,y)}}
+ if(bossPhase===1){bossTimer-=dt;spawnT-=dt;const rate=Math.max(0.12,0.6-(180-bossTimer)/180*0.4-floor*0.01);
+  if(spawnT<=0&&enemies.length<350){spawnT=rate;const n=1+Math.floor((180-bossTimer)/45);for(let i=0;i<n;i++){const a=Math.random()*6.28,d=VW/2+40;let x=P.x+Math.cos(a)*d,y=P.y+Math.sin(a)*d;x=Math.max(3*T,Math.min((MW-3)*T,x));y=Math.max(3*T,Math.min((MH-3)*T,y));spawnEnemy(x,y)}}
   if(bossTimer<=0){bossTimer=0;spawnBoss()}}
  else if(bossPhase===2){spawnT-=dt;if(spawnT<=0&&enemies.length<120){spawnT=1.2;const a=Math.random()*6.28;spawnEnemy(Math.max(3*T,Math.min((MW-3)*T,P.x+Math.cos(a)*150)),Math.max(3*T,Math.min((MH-3)*T,P.y+Math.sin(a)*150)))}}
  else if(bossPhase===0){spawnT-=dt;if(spawnT<=0&&enemies.length<80){spawnT=Math.max(1,4-floor*0.1);for(let i=0;i<3;i++){const a=Math.random()*6.28,x=P.x+Math.cos(a)*170,y=P.y+Math.sin(a)*170;if(!solid((x/T)|0,(y/T)|0))spawnEnemy(x,y)}}}
@@ -156,7 +175,7 @@ function update(dt){time+=dt;
   near(e.x,e.y,10,o=>{if(o!==e){const sx=e.x-o.x,sy=e.y-o.y,sd=sx*sx+sy*sy;if(sd<64&&sd>0.01){const s=1/Math.sqrt(sd);vx+=sx*s*25;vy+=sy*s*25}}});
   vx+=e.kx*8;vy+=e.ky*8;e.kx*=0.85;e.ky*=0.85;
   if(e.isBoss){e.x+=vx*dt;e.y+=vy*dt;e.x=Math.max(3*T,Math.min((MW-3)*T,e.x));e.y=Math.max(3*T,Math.min((MH-3)*T,e.y))}else moveCirc(e,vx*dt,vy*dt,3);
-  if(d<e.r+4&&P.inv<=0){P.hp-=e.dmg;P.inv=0.5;fx.push({type:'flash',life:0.15})}}
+  if(d<e.r+4&&P.inv<=0){if(P.sp.thorns)hurt(e,15*P.sp.thorns+e.mhp*0.05*P.sp.thorns);P.hp-=e.dmg;P.inv=0.5;fx.push({type:'flash',life:0.15})}}
  for(let i=enemies.length-1;i>=0;i--)if(enemies[i].hp<=0){enemies[i]=enemies[enemies.length-1];enemies.pop()}
  // bullets
  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.life-=dt;if(b.g)b.vy+=b.g*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;if(b.rot!==undefined)b.rot+=dt*12;
@@ -170,8 +189,10 @@ function update(dt){time+=dt;
   if(d2<64){if(g.heal)P.hp=Math.min(P.mhp,P.hp+30);else gainXP(g.v);gems[i]=gems[gems.length-1];gems.pop()}}
  if(gems.length>400){let s=0;for(const g of gems.splice(0,100))s+=g.v||0;gems.push({x:P.x+20,y:P.y,v:s})}
  for(let i=fx.length-1;i>=0;i--){fx[i].life-=dt;if(fx[i].life<=0)fx.splice(i,1)}
+ for(const c of chests)if(!c.open&&Math.hypot(P.x-c.x,P.y-c.y)<12){c.open=1;openChest();break}
  // stairs
  if(stairs&&Math.hypot(P.x-stairs.x,P.y-stairs.y)<10){floor++;genFloor();fx.push({type:'text',x:P.x,y:P.y-20,txt:'B'+floor+'F'+(floor%5===0?' ボスフロア！':''),life:2.5})}
+ if(P.hp<=0&&(P.sp.revive||0)>P.revUsed){P.revUsed++;P.hp=P.mhp*0.5;P.inv=2;fx.push({type:'text',txt:'不死鳥の羽で復活！',life:2});near(P.x,P.y,80,e=>hurt(e,50))}
  if(P.hp<=0){P.hp=0;state='dead';$('dead').classList.add('on');$('pause').style.display='none'}
  if(pendingLv>0&&state==='play')showLevel();
 }
@@ -181,6 +202,8 @@ function draw(){const camX=Math.round(P.x-VW/2),camY=Math.round(P.y-VH/2);cx.fil
  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const w=map[y*MW+x];if(w){if(y+1<MH&&!map[(y+1)*MW+x])cx.drawImage(tWall,x*T-camX,y*T-camY)}else cx.drawImage(tFloor,x*T-camX,y*T-camY)}
  if(stairs){const sx=stairs.x-camX-8,sy=stairs.y-camY-8;cx.fillStyle='#000';cx.fillRect(sx,sy,16,16);cx.fillStyle='#aaa';for(let i=0;i<4;i++)cx.fillRect(sx+i*2,sy+i*4,16-i*4,2);
   if(Math.abs(stairs.x-P.x)>VW/2||Math.abs(stairs.y-P.y)>VH/2){const a=Math.atan2(stairs.y-P.y,stairs.x-P.x);cx.fillStyle='#ff0';cx.fillRect(VW/2+Math.cos(a)*40-2,VH/2+Math.sin(a)*40-2,4,4)}}
+ for(const c of chests){const x=(c.x-camX-6)|0,y=(c.y-camY-5)|0;cx.fillStyle='#6a3a10';cx.fillRect(x,y,12,10);cx.fillStyle=c.open?'#222':'#ffd84a';cx.fillRect(x,y+3,12,2);cx.fillRect(x+5,y+3,2,4);if(!c.open&&((time*3)|0)%2){cx.fillStyle='#fff';cx.fillRect(x+10,y-2,1,1)}
+  if(!c.open&&(Math.abs(c.x-P.x)>VW/2||Math.abs(c.y-P.y)>VH/2)){const a=Math.atan2(c.y-P.y,c.x-P.x);cx.fillStyle='#fa0';cx.fillRect(VW/2+Math.cos(a)*48-2,VH/2+Math.sin(a)*48-2,4,4)}}
  for(const g of gems){const s=g.heal?S.heart:g.v>=5?S.gem3:g.v>=2?S.gem2:S.gem;cx.drawImage(s,(g.x-camX-1)|0,(g.y-camY-1)|0)}
  if(P.w.aura){const R=(26+P.w.aura*5)*areaMul();cx.fillStyle='rgba(255,240,120,'+(0.12+0.05*Math.sin(time*6))+')';cx.beginPath();cx.arc(P.x-camX,P.y-camY,R,0,7);cx.fill()}
  for(const e of enemies){const ex=e.x-camX,ey=e.y-camY;if(ex<-40||ey<-40||ex>VW+40||ey>VH+40)continue;
@@ -188,11 +211,14 @@ function draw(){const camX=Math.round(P.x-VW/2),camY=Math.round(P.y-VH/2);cx.fil
   else{const im=S[e.t.s];const bob=(Math.sin(time*8+e.x)*1)|0;cx.drawImage(im,(ex-im.width/2)|0,(ey-im.height/2+bob)|0);if(e.hit>0){cx.fillStyle='rgba(255,255,255,.6)';cx.fillRect((ex-im.width/2)|0,(ey-im.height/2+bob)|0,im.width,im.height)}}}
  // player
  if(P.inv<=0||((time*20)|0)%2){cx.save();cx.translate((P.x-camX)|0,(P.y-camY)|0);if(P.face<0)cx.scale(-1,1);cx.drawImage(S.hero,-5,-6-(P.moving?(((time*10)|0)%2):0));cx.restore()}
+ if(P.fam){const x=(P.fam.x-camX)|0,y=(P.fam.y-camY)|0;cx.fillStyle='#f8a';cx.fillRect(x-3,y-2,6,4);cx.fillStyle='#fff';cx.fillRect(x-2,y-1,1,1);cx.fillRect(x+1,y-1,1,1)}
  if(P.w.orb){const L=P.w.orb,n=1+L,R=(28+L*2)*areaMul();cx.fillStyle='#8ff';for(let i=0;i<n;i++){const a=P.orbA+i*Math.PI*2/n;cx.fillRect((P.x+Math.cos(a)*R-camX-2)|0,(P.y+Math.sin(a)*R-camY-2)|0,4,4)}}
  for(const b of bullets){const bx=(b.x-camX)|0,by=(b.y-camY)|0;if(b.enemy){cx.fillStyle='#f4f';cx.fillRect(bx-2,by-2,4,4)}else if(b.k==='bolt'){cx.fillStyle='#fff';cx.fillRect(bx-1,by-1,3,3);cx.fillStyle='#6cf';cx.fillRect(bx-2,by,1,1)}
   else{cx.save();cx.translate(bx,by);cx.rotate(b.rot);cx.fillStyle='#aaa';cx.fillRect(-4,-1,8,2);cx.fillStyle='#ddd';cx.fillRect(2,-4,3,6);cx.restore()}}
  cx.textAlign='center';cx.font='8px monospace';
  for(const f of fx){if(f.type==='whip'){cx.fillStyle='rgba(255,255,255,'+f.life*5+')';const x=f.s>0?P.x-camX:P.x-camX-f.w;cx.fillRect(x,P.y-camY-3,f.w,4)}
+  else if(f.type==='zap'){cx.strokeStyle='#ffff80';cx.beginPath();cx.moveTo(f.x-camX,f.y-camY);cx.lineTo((f.x+f.x2)/2-camX+(Math.random()-.5)*8,(f.y+f.y2)/2-camY+(Math.random()-.5)*8);cx.lineTo(f.x2-camX,f.y2-camY);cx.stroke()}
+  else if(f.type==='beam'){cx.save();cx.translate(f.x-camX,f.y-camY);cx.rotate(f.a);cx.fillStyle='rgba(255,255,200,'+f.life*4+')';cx.fillRect(0,-f.w/2,f.l,f.w);cx.restore()}
   else if(f.type==='boom'){cx.fillStyle='rgba(255,140,30,'+f.life*2.5+')';cx.beginPath();cx.arc(f.x-camX,f.y-camY,f.r*(1.2-f.life),0,7);cx.fill()}
   else if(f.type==='num'){cx.fillStyle='#fff';cx.fillText(f.txt,f.x-camX,f.y-camY-(0.5-f.life)*20)}
   else if(f.type==='text'){cx.font='bold 10px sans-serif';cx.fillStyle='#000';cx.fillText(f.txt,VW/2+1,VH/3+1);cx.fillStyle='#ffd84a';cx.fillText(f.txt,VW/2,VH/3);cx.font='8px monospace'}
@@ -214,14 +240,14 @@ function draw(){const camX=Math.round(P.x-VW/2),camY=Math.round(P.y-VH/2);cx.fil
 let last=performance.now();
 function loop(now){let dt=Math.min(0.05,(now-last)/1000);last=now;if(state==='play')update(dt);if(P&&map)draw();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
-function startGame(cont){if(state==='play')return;const s=cont&&load();P=newPlayer();floor=1;if(s){floor=s.floor;Object.assign(P,s.P)}pendingLv=0;genFloor();
+function startGame(cont){if(state==='play')return;const s=cont&&load();P=newPlayer();floor=1;if(s){floor=s.floor||1;Object.assign(P,s.P);P.w=P.w||{bolt:1};P.st=P.st||{};P.sp=P.sp||{};P.cd={}}pendingLv=0;genFloor();
  fx.push({type:'text',x:0,y:0,txt:'B'+floor+'F'+(floor%5===0?' ボスフロア！5分耐えろ！':''),life:2.5});
  $('title').classList.remove('on');$('pause').style.display='block';state='play';last=performance.now()}
 function tap(el,fn){let t=0;const h=e=>{const n=Date.now();if(n-t<400)return;t=n;try{fn()}catch(err){console.error(err)}};el.addEventListener('click',h);el.addEventListener('touchend',h,{passive:true})}
 tap($('bNew'),()=>startGame(false));tap($('bCont'),()=>startGame(true));if(!load())$('bCont').style.display='none';
 function togglePause(){if(state==='play'){state='pause';$('pz').classList.add('on')}else if(state==='pause'){state='play';$('pz').classList.remove('on');last=performance.now()}}
-tap($('pause'),togglePause);tap($('bRes'),togglePause);
+tap($('bTre'),()=>{$('tre').classList.remove('on');state='play';last=performance.now()});tap($('pause'),togglePause);tap($('bRes'),togglePause);
 tap($('bTitle'),()=>{save();$('pz').classList.remove('on');$('pause').style.display='none';state='title';$('bCont').style.display='';$('title').classList.add('on')});
 tap($('bRetry'),()=>{$('dead').classList.remove('on');genFloor();fx.push({type:'text',x:0,y:0,txt:'B'+floor+'F 再挑戦！',life:2});$('pause').style.display='block';state='play'});
-window.__dbg={get P(){return P},get enemies(){return enemies},setFloor(f){floor=f;genFloor()},get state(){return state}};
+window.__dbg={get P(){return P},get enemies(){return enemies},setFloor(f){floor=f;genFloor()},get state(){return state},get chests(){return chests},get bossTimer(){return bossTimer},openChest};
 </script></body></html>
